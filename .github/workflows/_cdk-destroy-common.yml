@@ -1,0 +1,54 @@
+name: "[Private] Destroy Infrastructure Environment"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment to destroy (dev or prod)'
+      stack-pattern:
+        required: true
+        type: string
+        description: 'Stack name pattern to destroy (e.g. *-dev or *-prod)'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infrastructure
+    outputs:
+      artifact_name: cdk-out-${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('{0}_PORTFOLIO_GITHUB_ROLE', inputs.environment)] }}
+          aws-region: us-east-1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: infrastructure/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Synthesize
+        run: yarn synth
+
+      - name: Destroy ${{ inputs.environment }}
+        run: yarn destroy '${{ inputs.stack-pattern }}' --force
