@@ -10,14 +10,14 @@ permissions:
 jobs:
   destroy-dev:
     name: Destroy to Development
-    uses: ./.github/workflows/_cdk-destroy-common.yml
+    uses: ./.github/workflows/_cdk-destroy.yml
     with:
       environment: dev
       stack-pattern: '*-dev'
 
   destroy-prod:
     name: Destroy to Development
-    uses: ./.github/workflows/_cdk-destroy-common.yml
+    uses: ./.github/workflows/_cdk-destroy.yml
     with:
       environment: prod
       stack-pattern: '*-prod'
