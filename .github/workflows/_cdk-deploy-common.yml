@@ -1,0 +1,57 @@
+name: "[Private] Common CDK Deployment"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment to deploy to (dev or prod)'
+      stack-pattern:
+        required: true
+        type: string
+        description: 'Stack name pattern to deploy (e.g. *-dev or *-prod)'
+      artifact_name:
+        required: true
+        type: string
+        description: 'Name of the artifact containing the cdk.out directory'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: ./infrastructure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('{0}_PORTFOLIO_GITHUB_ROLE', inputs.environment)] }}
+          aws-region: us-east-1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: infrastructure/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Download cdk.out artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ./infrastructure/cdk.out
+
+      - name: Deploy to ${{ inputs.environment }}
+        run: yarn deploy '${{ inputs.stack-pattern }}' --require-approval never

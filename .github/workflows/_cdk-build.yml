@@ -1,0 +1,43 @@
+name: "[Private] CDK Build and Artifact Creation"
+
+on:
+  workflow_call:
+    outputs:
+      artifact_name:
+        description: 'Name of the artifact containing the cdk.out directory'
+        value: ${{ jobs.build.outputs.artifact_name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infrastructure
+    outputs:
+      artifact_name: cdk-out-${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: infrastructure/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Synthesize
+        run: yarn synth
+
+      - name: Upload cdk.out as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-out-${{ github.sha }}
+          path: ./infrastructure/cdk.out
+          retention-days: 7

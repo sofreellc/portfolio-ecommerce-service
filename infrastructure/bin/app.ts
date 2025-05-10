@@ -1,6 +1,6 @@
 #!/opt/homebrew/opt/node/bin/node
 import * as cdk from 'aws-cdk-lib';
-import { InfrastructureStack } from '../lib/infrastructure-stack';
+import { AppStack } from '../lib/AppStack';
 import { Tags } from "aws-cdk-lib";
 
 const app = new cdk.App();
@@ -26,7 +26,7 @@ export const environments: Record<string, EnvironmentConfig> = {
 }
 
 Object.values(environments).forEach(envConfig => {
-  new InfrastructureStack(app, `ecommerce-service-${envConfig.name}`, {
+  new AppStack(app, `ecommerce-service-${envConfig.name}`, {
     env: {
       account: envConfig.account,
       region: envConfig.region
