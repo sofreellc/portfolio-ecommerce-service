@@ -24,3 +24,25 @@ jobs:
       environment: ${{ inputs.environment }}
       stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-api-prereq', inputs.environment) }}
       artifact_name: ${{ inputs.artifact_name }}
+
+  build-and-publish-api:
+    needs: deploy-api-prereq
+    name: Build and Publish API
+    uses: ./.github/workflows/_app-build-and-publish.yml
+    with:
+      app_directory: 'api'
+      ecs_cluster: 'portfolio-ecommerce-cluster'
+      ecs_repository: 'portfolio-ecommerce-service'
+      ecs_service: 'portfolio-ecommerce-service'
+      environment: ${{ inputs.environment }}
+
+#  deploy-api:
+#    name: Deploy API Infra to Development
+#    uses: ./.github/workflows/_ecs-deploy.yml
+#    needs: build-and-publish-api
+#    with:
+#      environment: ${{ inputs.environment }}
+#      ecs_cluster: 'portfolio-ecommerce-cluster'
+#      ecs_repository: 'portfolio-ecommerce-api'
+#      ecs_service: 'portfolio-ecommerce-api'
+#
