@@ -19,6 +19,10 @@ on:
       ecs_repository:
         required: true
         type: string
+    outputs:
+      image:
+        description: "The full URI of the published image"
+        value: ${{ jobs.build-and-publish.outputs.image }}
 
 env:
   AWS_REGION: us-east-1
@@ -26,6 +30,8 @@ env:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
 
     steps:
       - name: Checkout code

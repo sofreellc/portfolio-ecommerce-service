@@ -46,12 +46,13 @@ jobs:
       artifact_name: ${{ inputs.artifact_name }}
 
   deploy-api:
-    name: Deploy API
-    uses: ./.github/workflows/_ecs-deploy.yml
-    needs: deploy-api-infra
+    name: Deploy API with CodeDeploy
+    uses: ./.github/workflows/_codedeploy-deploy.yml
+    needs: [build-and-publish-api, deploy-api-infra]
     with:
       environment: ${{ inputs.environment }}
+      image_uri: ${{ needs.build-and-publish-api.outputs.image }}
+      application_name: 'portfolio-ecommerce-service'
+      deployment_group: 'portfolio-ecommerce-service-dg'
       ecs_cluster: 'portfolio-ecommerce-cluster'
-      ecs_repository: 'portfolio-ecommerce-service'
       ecs_service: 'portfolio-ecommerce-service'
-

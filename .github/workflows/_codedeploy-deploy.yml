@@ -1,0 +1,108 @@
+name: "[Private] Deploy with CodeDeploy"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment (dev or prod)'
+      application_name:
+        required: true
+        type: string
+        description: 'CodeDeploy application name'
+      deployment_group:
+        required: true
+        type: string
+        description: 'CodeDeploy deployment group name'
+      image_uri:
+        required: true
+        type: string
+        description: 'ECR image URI to deploy'
+      ecs_cluster:
+        required: true
+        type: string
+      ecs_service:
+        required: true
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-with-codedeploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('{0}_PORTFOLIO_GITHUB_ROLE', inputs.environment)] }}
+          aws-region: us-east-1
+
+      - name: Get current task definition
+        id: get-task-def
+        run: |
+          TASK_DEF_ARN=$(aws ecs describe-services --cluster ${{ inputs.ecs_cluster }} --services ${{ inputs.ecs_service }} --query 'services[0].taskDefinition' --output text)
+          echo "TASK_DEF_ARN=$TASK_DEF_ARN" >> $GITHUB_ENV
+          aws ecs describe-task-definition --task-definition $TASK_DEF_ARN --query 'taskDefinition' > task-definition.json
+          echo "::set-output name=task-definition::task-definition.json"
+
+      - name: Create task definition revision
+        id: create-task-def
+        run: |
+          CONTAINER_NAME="portfolio-ecommerce-service"
+          # Update the container image in the task definition and filter only allowed fields
+          jq --arg IMAGE "${{ inputs.image_uri }}" \
+            '{
+              family: .family,
+              networkMode: .networkMode,
+              containerDefinitions: (.containerDefinitions | map(if .name == "'$CONTAINER_NAME'" then . + {image: $IMAGE} else . end)),
+              requiresCompatibilities: .requiresCompatibilities,
+              cpu: .cpu,
+              memory: .memory,
+              executionRoleArn: .executionRoleArn,
+              taskRoleArn: .taskRoleArn
+            }' task-definition.json > new-task-definition.json
+          
+          # Register the new task definition
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
+          echo "::set-output name=task-definition-arn::$NEW_TASK_DEF_ARN"
+
+      - name: Generate appspec.yaml
+        run: |
+          echo "version: 0.0" > appspec.yaml
+          echo "Resources:" >> appspec.yaml
+          echo "  - TargetService:" >> appspec.yaml
+          echo "      Type: AWS::ECS::Service" >> appspec.yaml
+          echo "      Properties:" >> appspec.yaml
+          echo "        TaskDefinition: $NEW_TASK_DEF_ARN" >> appspec.yaml
+          echo "        LoadBalancerInfo:" >> appspec.yaml
+          echo "          ContainerName: \"portfolio-ecommerce-service\"" >> appspec.yaml
+          echo "          ContainerPort: 8080" >> appspec.yaml
+
+      - name: Create deployment
+        id: deploy
+        run: |
+          # Escape the AppSpec file content safely as JSON
+          RAW_APPSPEC=$(jq -Rs . < appspec.yaml)
+
+          # Create a deployment with CodeDeploy
+          DEPLOYMENT_ID=$(aws deploy create-deployment \
+            --application-name "${{ inputs.application_name }}" \
+            --deployment-group-name "${{ inputs.deployment_group }}" \
+            --revision "{\"revisionType\": \"AppSpecContent\", \"appSpecContent\": {\"content\": $RAW_APPSPEC}}" \
+            --description "Deployment from GitHub Actions" \
+            --query "deploymentId" --output text)
+
+          echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
+          echo "::set-output name=deployment-id::$DEPLOYMENT_ID"
+
+          # Wait for deployment to complete
+          aws deploy wait deployment-successful --deployment-id "$DEPLOYMENT_ID"
+
+          echo "✅ Deployment $DEPLOYMENT_ID completed successfully"
