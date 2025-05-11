@@ -17,29 +17,29 @@ jobs:
     name: Build and Synthesize
     uses: ./.github/workflows/_cdk-build.yml
 
-  deploy-dev:
-    name: Deploy to Development
+  deploy-infra-dev:
+    name: Deploy Shared Infra to Development
     needs: build
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: dev
-      stack-pattern: '*-dev'
+      stack-pattern: 'ecommerce-infra-dev'
       artifact_name: ${{ needs.build.outputs.artifact_name }}
 
   wait-for-approval:
     name: Wait for Production Approval
-    needs: deploy-dev
+    needs: deploy-infra-dev
     runs-on: ubuntu-latest
     environment: production-approval
     steps:
       - name: Approval Gate
         run: echo "Deployment to production approved!"
 
-  deploy-prod:
+  deploy-infra-prod:
     name: Deploy to Production
     needs: [build, wait-for-approval]
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: prod
-      stack-pattern: '*-prod'
+      stack-pattern: 'ecommerce-infra-prod'
       artifact_name: ${{ needs.build.outputs.artifact_name }}
