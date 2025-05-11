@@ -5,7 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'infrastructure/**'
+      - 'infrastructure/lib/ApiPrereqStack.ts'
+      - 'infrastructure/lib/ApiStack.ts'
+      - 'api/**'
   workflow_dispatch:
 
 permissions:
@@ -35,7 +37,7 @@ jobs:
         run: echo "Deployment to production approved!"
 
   deploy-api-prod:
-    name: Deploy API to Development
+    name: Deploy API to Production
     uses: ./.github/workflows/_api-deploy.yml
     needs: [build, wait-for-approval]
     with:

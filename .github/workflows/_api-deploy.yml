@@ -17,8 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  deploy-api-prereq:
-    name: Deploy API Infra to Development
+  deploy-api-infra-prereq:
+    name: Deploy API Infra Prereq
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: ${{ inputs.environment }}
@@ -26,7 +26,7 @@ jobs:
       artifact_name: ${{ inputs.artifact_name }}
 
   build-and-publish-api:
-    needs: deploy-api-prereq
+    needs: deploy-api-infra-prereq
     name: Build and Publish API
     uses: ./.github/workflows/_app-build-and-publish.yml
     with:
@@ -36,13 +36,22 @@ jobs:
       ecs_service: 'portfolio-ecommerce-service'
       environment: ${{ inputs.environment }}
 
-#  deploy-api:
-#    name: Deploy API Infra to Development
-#    uses: ./.github/workflows/_ecs-deploy.yml
-#    needs: build-and-publish-api
-#    with:
-#      environment: ${{ inputs.environment }}
-#      ecs_cluster: 'portfolio-ecommerce-cluster'
-#      ecs_repository: 'portfolio-ecommerce-api'
-#      ecs_service: 'portfolio-ecommerce-api'
-#
+  deploy-api-infra:
+    name: Deploy API Infra
+    uses: ./.github/workflows/_cdk-deploy.yml
+    needs: build-and-publish-api
+    with:
+      environment: ${{ inputs.environment }}
+      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-api', inputs.environment) }}
+      artifact_name: ${{ inputs.artifact_name }}
+
+  deploy-api:
+    name: Deploy API
+    uses: ./.github/workflows/_ecs-deploy.yml
+    needs: deploy-api-infra
+    with:
+      environment: ${{ inputs.environment }}
+      ecs_cluster: 'portfolio-ecommerce-cluster'
+      ecs_repository: 'portfolio-ecommerce-service'
+      ecs_service: 'portfolio-ecommerce-service'
+
