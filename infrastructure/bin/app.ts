@@ -2,6 +2,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { InfrastructureStack } from '../lib/InfrastructureStack';
 import { Tags } from "aws-cdk-lib";
+import {ApiPrereqStack} from "../lib/ApiPrereqStack";
 
 const app = new cdk.App();
 Tags.of(app).add('workload', 'portfolio');
@@ -32,11 +33,18 @@ Object.values(environments).forEach(envConfig => {
     console.log(`Skipping env`, envConfig)
     return;
   }
+
   new InfrastructureStack(app, `ecommerce-infra-${envConfig.name}`, {
     env: {
       account: envConfig.account,
       region: envConfig.region
     },
   });
-});
 
+  new ApiPrereqStack(app, `ecommerce-api-prereq-${envConfig.name}`, {
+    env: {
+      account: envConfig.account,
+      region: envConfig.region
+    },
+  })
+});

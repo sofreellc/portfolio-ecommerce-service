@@ -14,5 +14,93 @@
     "us-east-1d",
     "us-east-1e",
     "us-east-1f"
-  ]
+  ],
+  "vpc-provider:account=914847526688:filter.tag:Name=portfolio-ecommerce-vpc:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0c5597e626233cbf1",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "914847526688",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Private",
+        "type": "Private",
+        "subnets": [
+          {
+            "subnetId": "subnet-007bf39a8721724ac",
+            "cidr": "10.0.128.0/18",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-0e7cb753193de9dc0"
+          },
+          {
+            "subnetId": "subnet-09541ee56b8524c47",
+            "cidr": "10.0.192.0/18",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-065335865167602cd"
+          }
+        ]
+      },
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-02210db04d9166293",
+            "cidr": "10.0.0.0/18",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-04a920d9a5cd43c7e"
+          },
+          {
+            "subnetId": "subnet-08bd24695a702d2b0",
+            "cidr": "10.0.64.0/18",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-0f9e517c2d070c801"
+          }
+        ]
+      }
+    ]
+  },
+  "vpc-provider:account=427566522857:filter.tag:Name=portfolio-ecommerce-vpc:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-070a718818b6bd234",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "427566522857",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Private",
+        "type": "Private",
+        "subnets": [
+          {
+            "subnetId": "subnet-0f790e591a5cfa3d1",
+            "cidr": "10.0.128.0/18",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-03575fc7974619255"
+          },
+          {
+            "subnetId": "subnet-04fc8fd0ea4eec8b2",
+            "cidr": "10.0.192.0/18",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-0aa3416511cb7d320"
+          }
+        ]
+      },
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-0f63352186821c46f",
+            "cidr": "10.0.0.0/18",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-0705b687f80edf337"
+          },
+          {
+            "subnetId": "subnet-09d2689f350296e5d",
+            "cidr": "10.0.64.0/18",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-06683401c587cce0a"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -1,0 +1,26 @@
+name: "[Private] Build and Deploy API"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment (dev or prod)'
+      artifact_name:
+        required: true
+        type: string
+        description: 'Name of the artifact containing the cdk.out directory'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-api-prereq:
+    name: Deploy API Infra to Development
+    uses: ./.github/workflows/_cdk-deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+      stack-pattern: ${{ format('ecommerce-api-prereq-{0}', inputs.environment) }}
+      artifact_name: ${{ inputs.artifact_name }}
