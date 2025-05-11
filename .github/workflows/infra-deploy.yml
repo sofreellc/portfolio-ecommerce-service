@@ -23,7 +23,7 @@ jobs:
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: dev
-      stack-pattern: 'ecommerce-infra-dev'
+      stack-pattern: 'portfolio-stage-dev/ecommerce-infra'
       artifact_name: ${{ needs.build.outputs.artifact_name }}
 
   wait-for-approval:
@@ -41,5 +41,5 @@ jobs:
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: prod
-      stack-pattern: 'ecommerce-infra-prod'
+      stack-pattern: 'portfolio-stage-prod/ecommerce-infra'
       artifact_name: ${{ needs.build.outputs.artifact_name }}

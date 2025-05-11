@@ -6,7 +6,7 @@ import {StackProps} from "aws-cdk-lib";
 export class ApiPrereqStack extends cdk.Stack {
     public readonly repositoryName = 'portfolio-ecommerce-service';
 
-    constructor(scope: Construct, id: string, props: StackProps) {
+    constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
         new ecr.Repository(this, 'ApiRepository', {

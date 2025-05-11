@@ -1,7 +1,7 @@
 #!/opt/homebrew/opt/node/bin/node
 import * as cdk from 'aws-cdk-lib';
 import { InfrastructureStack } from '../lib/InfrastructureStack';
-import { Tags } from "aws-cdk-lib";
+import {StageProps, Tags} from "aws-cdk-lib";
 import {ApiPrereqStack} from "../lib/ApiPrereqStack";
 
 const app = new cdk.App();
@@ -26,6 +26,16 @@ export const environments: Record<string, EnvironmentConfig> = {
   }
 }
 
+export class PortfolioEnvStage extends cdk.Stage {
+  constructor(scope: cdk.App, id: string, props?: StageProps) {
+    super(scope, id, props);
+
+    new InfrastructureStack(this, `ecommerce-infra`);
+
+    new ApiPrereqStack(this, `ecommerce-api-prereq`)
+  }
+}
+
 const targetEnv = app.node.tryGetContext('targetEnv')
 
 Object.values(environments).forEach(envConfig => {
@@ -34,17 +44,10 @@ Object.values(environments).forEach(envConfig => {
     return;
   }
 
-  new InfrastructureStack(app, `ecommerce-infra-${envConfig.name}`, {
+  new PortfolioEnvStage(app, `portfolio-stage-${envConfig.name}`, {
     env: {
       account: envConfig.account,
       region: envConfig.region
-    },
+    }
   });
-
-  new ApiPrereqStack(app, `ecommerce-api-prereq-${envConfig.name}`, {
-    env: {
-      account: envConfig.account,
-      region: envConfig.region
-    },
-  })
 });
