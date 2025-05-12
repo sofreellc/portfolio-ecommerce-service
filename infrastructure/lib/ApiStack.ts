@@ -9,6 +9,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as path from 'path';
 
 export interface ApiStackProps extends cdk.StackProps {
@@ -120,6 +121,16 @@ export class ApiStack extends cdk.Stack {
       resources: ['*'],
     }));
 
+    const errorRateAlarm = new cloudwatch.Alarm(this, 'High5xxErrorRate', {
+      metric: fargateService.targetGroup.metrics.httpCodeTarget(elbv2.HttpCodeTarget.TARGET_5XX_COUNT, {
+        period: cdk.Duration.minutes(1),
+        statistic: 'Sum',
+      }),
+      threshold: 5,
+      evaluationPeriods: 1,
+      alarmDescription: 'Too many 5xx errors during deployment',
+    });
+
     new codedeploy.EcsDeploymentGroup(this, 'ApiDeploymentGroup', {
       deploymentGroupName: 'portfolio-ecommerce-service-dg',
       application,
@@ -133,6 +144,7 @@ export class ApiStack extends cdk.Stack {
         testListener,
       },
       role: deployRole,
+      alarms: [errorRateAlarm],
     });
   }
 }
