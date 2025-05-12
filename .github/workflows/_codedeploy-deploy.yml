@@ -73,6 +73,13 @@ jobs:
           echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
           echo "::set-output name=task-definition-arn::$NEW_TASK_DEF_ARN"
 
+      - name: Lookup validation Lambda ARN
+        id: lookup-hook
+        run: |
+          VALIDATION_ARN=$(aws lambda get-function --function-name validate-green --query 'Configuration.FunctionArn' --output text)
+          echo "VALIDATION_ARN=$VALIDATION_ARN" >> $GITHUB_ENV
+          echo "::set-output name=arn::$VALIDATION_ARN"
+
       - name: Generate appspec.yaml
         run: |
           echo "version: 0.0" > appspec.yaml
@@ -84,6 +91,8 @@ jobs:
           echo "        LoadBalancerInfo:" >> appspec.yaml
           echo "          ContainerName: \"portfolio-ecommerce-service\"" >> appspec.yaml
           echo "          ContainerPort: 8080" >> appspec.yaml
+          echo "Hooks:" >> appspec.yaml
+          echo "  - AfterAllowTestTraffic: \"$VALIDATION_ARN\"" >> appspec.yaml
 
       - name: Create deployment
         id: deploy

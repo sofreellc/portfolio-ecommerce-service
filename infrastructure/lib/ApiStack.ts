@@ -8,6 +8,8 @@ import * as codedeploy from 'aws-cdk-lib/aws-codedeploy';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as path from 'path';
 
 export interface ApiStackProps extends cdk.StackProps {
   vpcName: string;
@@ -86,9 +88,10 @@ export class ApiStack extends cdk.Stack {
       },
     });
 
+    const testListenerPort = 8081
     const testListener = new elbv2.ApplicationListener(this, 'TestListener', {
       loadBalancer: fargateService.loadBalancer,
-      port: 8081,
+      port: testListenerPort,
       protocol: elbv2.ApplicationProtocol.HTTP,
       open: true,
     });
@@ -97,13 +100,32 @@ export class ApiStack extends cdk.Stack {
       targetGroups: [greenTargetGroup],
     });
 
+    const validateHookFn = new lambda.Function(this, 'ValidateGreenTargetHook', {
+      functionName: "validate-green",
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/validate-green')),
+      environment: {
+        TEST_ENDPOINT: `http://${fargateService.loadBalancer.loadBalancerDnsName}:${testListenerPort}/`
+      },
+      timeout: cdk.Duration.seconds(30),
+    });
+
+    validateHookFn.addPermission('CodeDeployInvoke', {
+      principal: new iam.ServicePrincipal('codedeploy.amazonaws.com'),
+      action: 'lambda:InvokeFunction',
+    });
+    validateHookFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['codedeploy:PutLifecycleEventHookExecutionStatus'],
+      resources: ['*'],
+    }));
+
     new codedeploy.EcsDeploymentGroup(this, 'ApiDeploymentGroup', {
       deploymentGroupName: 'portfolio-ecommerce-service-dg',
       application,
       service: fargateService.service,
       deploymentConfig: codedeploy.EcsDeploymentConfig.ALL_AT_ONCE,
       blueGreenDeploymentConfig: {
-        deploymentApprovalWaitTime: cdk.Duration.minutes(15),
         terminationWaitTime: cdk.Duration.minutes(5),
         blueTargetGroup: fargateService.targetGroup,
         greenTargetGroup: greenTargetGroup,

@@ -1,0 +1,6 @@
+{
+  "name": "validate-green",
+  "version": "1.0.0",
+  "description": "Lambda function to validate green deployment for CodeDeploy",
+  "main": "index.js"
+}
