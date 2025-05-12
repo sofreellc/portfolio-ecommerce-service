@@ -2,9 +2,6 @@ name: "Destroy Infrastructure"
 
 on:
   workflow_dispatch:
-  # This is my portfolio project, so if I forget to manually destroy it, destroy when the day is over
-  schedule:
-    - cron: '0 6 * * *'
 
 permissions:
   id-token: write
@@ -12,15 +9,14 @@ permissions:
 
 jobs:
   destroy-dev:
-    name: Destroy to Development
-    uses: ./.github/workflows/_cdk-destroy.yml
+    name: Destroy Development
+    uses: ./.github/workflows/_infra-destroy.yml
     with:
       environment: dev
-      stack-pattern: 'portfolio-stage-dev/*'
 
   destroy-prod:
-    name: Destroy to Development
-    uses: ./.github/workflows/_cdk-destroy.yml
+    name: Destroy Production
+    uses: ./.github/workflows/_infra-destroy.yml
+    needs: destroy-dev
     with:
       environment: prod
-      stack-pattern: 'portfolio-stage-prod/*'
