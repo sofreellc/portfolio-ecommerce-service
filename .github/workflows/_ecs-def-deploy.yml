@@ -1,0 +1,73 @@
+name: "[Private] Deploy API service w/ New Task Definition Revision"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment (dev or prod)'
+      image_uri:
+        required: true
+        type: string
+        description: 'ECR image URI to deploy'
+      ecs_cluster:
+        required: true
+        type: string
+      ecs_service:
+        required: true
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-with-def:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('{0}_PORTFOLIO_GITHUB_ROLE', inputs.environment)] }}
+          aws-region: us-east-1
+
+      - name: Get current task definition
+        id: get-task-def
+        run: |
+          TASK_DEF_ARN=$(aws ecs describe-services --cluster ${{ inputs.ecs_cluster }} --services ${{ inputs.ecs_service }} --query 'services[0].taskDefinition' --output text)
+          echo "TASK_DEF_ARN=$TASK_DEF_ARN" >> $GITHUB_ENV
+          aws ecs describe-task-definition --task-definition $TASK_DEF_ARN --query 'taskDefinition' > task-definition.json
+          echo "::set-output name=task-definition::task-definition.json"
+
+      - name: Create task definition revision
+        id: create-task-def
+        run: |
+          CONTAINER_NAME="portfolio-ecommerce-service"
+          # Update the container image in the task definition and filter only allowed fields
+          jq --arg IMAGE "${{ inputs.image_uri }}" \
+            '{
+              family: .family,
+              networkMode: .networkMode,
+              containerDefinitions: (.containerDefinitions | map(if .name == "'$CONTAINER_NAME'" then . + {image: $IMAGE} else . end)),
+              requiresCompatibilities: .requiresCompatibilities,
+              cpu: .cpu,
+              memory: .memory,
+              executionRoleArn: .executionRoleArn,
+              taskRoleArn: .taskRoleArn
+            }' task-definition.json > new-task-definition.json
+          
+          # Register the new task definition
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
+          echo "::set-output name=task-definition-arn::$NEW_TASK_DEF_ARN"
+
+      - name: Update ECS service to trigger rolling update
+        run: |
+          aws ecs update-service \
+            --cluster "${{ inputs.ecs_cluster }}" \
+            --service "${{ inputs.ecs_service }}" \
+            --task-definition "$NEW_TASK_DEF_ARN"

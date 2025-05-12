@@ -1,4 +1,4 @@
-name: "[Private] Deploy API Service"
+name: "[Private] Deploy API Service by Changing latest Tag"
 
 on:
   workflow_call:
@@ -13,15 +13,12 @@ on:
       ecs_service:
         required: true
         type: string
-      ecs_repository:
-        required: true
-        type: string
 
 env:
   AWS_REGION: us-east-1
 
 jobs:
-  deploy-ecs:
+  deploy-with-tag:
     runs-on: ubuntu-latest
 
     steps:
