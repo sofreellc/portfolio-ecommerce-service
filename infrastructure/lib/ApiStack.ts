@@ -11,6 +11,8 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as path from 'path';
+import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
 export interface ApiStackProps extends cdk.StackProps {
   vpcName: string;
@@ -44,7 +46,7 @@ export class ApiStack extends cdk.Stack {
         containerPort: 8080,
         containerName: 'portfolio-ecommerce-service',
       },
-      publicLoadBalancer: true,
+      publicLoadBalancer: false,
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
       deploymentController: { type: ecs.DeploymentControllerType.CODE_DEPLOY },
@@ -101,13 +103,57 @@ export class ApiStack extends cdk.Stack {
       targetGroups: [greenTargetGroup],
     });
 
+    const httpApi = new apigatewayv2.HttpApi(this, 'ApiGatewayHttpApi', {
+      apiName: 'portfolio-api',
+    });
+
+    const vpcLinkSg = new ec2.SecurityGroup(this, 'VpcLinkSecurityGroup', {
+      vpc,
+      description: 'Security group for API Gateway VPC Link',
+      allowAllOutbound: true,
+    });
+
+    fargateService.loadBalancer.connections.allowFrom(
+        vpcLinkSg,
+        ec2.Port.tcp(80),
+        'Allow traffic from VPC Link to ALB'
+    );
+    fargateService.loadBalancer.connections.allowFrom(
+        vpcLinkSg,
+        ec2.Port.tcp(testListenerPort),
+        'Allow traffic from VPC Link to ALB test listener'
+    );
+
+    const vpcLink = new apigatewayv2.VpcLink(this, 'VpcLinkToALB', {
+      vpc,
+      securityGroups: [vpcLinkSg],
+      subnets: { subnets: vpc.privateSubnets, },
+    });
+
+    httpApi.addRoutes({
+      path: '/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.ANY],
+      integration: new integrations.HttpAlbIntegration('ALBIntegration', fargateService.listener, { vpcLink, }),
+    });
+
+    httpApi.addRoutes({
+      path: '/test/{proxy+}',
+      methods: [apigatewayv2.HttpMethod.ANY],
+      integration: new integrations.HttpAlbIntegration('ALBTestIntegration', testListener, {
+        vpcLink,
+        parameterMapping: new apigatewayv2.ParameterMapping()
+            // Use the proxy path parameter value
+            .overwritePath(apigatewayv2.MappingValue.requestPathParam('proxy'))
+      }),
+    });
+
     const validateHookFn = new lambda.Function(this, 'ValidateGreenTargetHook', {
       functionName: "validate-green",
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/validate-green')),
       environment: {
-        TEST_ENDPOINT: `http://${fargateService.loadBalancer.loadBalancerDnsName}:${testListenerPort}/`
+        TEST_ENDPOINT: `${httpApi.apiEndpoint}/test/`
       },
       timeout: cdk.Duration.seconds(30),
     });
