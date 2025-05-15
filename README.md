@@ -9,11 +9,15 @@ This portfolio project demonstrates a comprehensive e-commerce system built with
 - ✅ AWS CDK infrastructure project setup
 - ✅ Github Actions Pipeline setup 
   - ✅ VPC and ECS infrastructure
-  - ✅ Build and publish API image
-  - ✅ Deployment ECS Go API service with CodeDeploy
+  - ✅ Build and deploy Go API service with CodeDeploy
+    - ✅ Build and publish API image
+    - ✅ ECS deployment with Fargate
     - ✅ Blue/Green deployment configured
     - ✅ 5XX error monitoring and automated rollbacks
-  - [ ] Build and deploy Next.js frontend
+  - ✅ Build and deploy Next.js frontend
+    - ✅ Build and publish Web image
+    - ✅ ECS deployment with Fargate
+    - ✅ CloudFront CDN for caching static assets
 
 ### ⬜ User Authentication
 - [ ] Cognito user pools configuration
@@ -80,6 +84,6 @@ make reset
 ```
 portfolio-ecommerce-service/
 ├── api/                # Go API service
+├── web/                # Next.js frontend application
 ├── infrastructure/     # AWS CDK infrastructure code
 ```
-

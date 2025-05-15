@@ -1,0 +1,56 @@
+name: "[Private] Build and Deploy Web"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment (dev or prod)'
+      artifact_name:
+        required: true
+        type: string
+        description: 'Name of the artifact containing the cdk.out directory'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-web-infra-prereq:
+    name: Deploy Web Infra Prereq
+    uses: ./.github/workflows/_cdk-deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-web-prereq', inputs.environment) }}
+      artifact_name: ${{ inputs.artifact_name }}
+
+  build-and-publish-web:
+    needs: deploy-web-infra-prereq
+    name: Build and Publish Web
+    uses: ./.github/workflows/_app-build-and-publish.yml
+    with:
+      app_directory: 'web'
+      ecs_cluster: 'portfolio-ecommerce-cluster'
+      ecs_repository: 'portfolio-ecommerce-web'
+      ecs_service: 'portfolio-ecommerce-web'
+      environment: ${{ inputs.environment }}
+
+  deploy-web-infra:
+    name: Deploy Web Infra
+    uses: ./.github/workflows/_cdk-deploy.yml
+    needs: build-and-publish-web
+    with:
+      environment: ${{ inputs.environment }}
+      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-web', inputs.environment) }}
+      artifact_name: ${{ inputs.artifact_name }}
+
+  deploy-web:
+    name: Deploy Web with ECS
+    uses: ./.github/workflows/_ecs-def-deploy.yml
+    needs: [build-and-publish-web, deploy-web-infra]
+    with:
+      environment: ${{ inputs.environment }}
+      image_uri: ${{ needs.build-and-publish-web.outputs.image }}
+      ecs_cluster: 'portfolio-ecommerce-cluster'
+      ecs_service: 'portfolio-ecommerce-web'

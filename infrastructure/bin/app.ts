@@ -4,6 +4,8 @@ import { InfrastructureStack } from '../lib/InfrastructureStack';
 import {StageProps, Tags} from "aws-cdk-lib";
 import {ApiPrereqStack} from "../lib/ApiPrereqStack";
 import {ApiStack} from "../lib/ApiStack";
+import {WebPrereqStack} from "../lib/WebPrereqStack";
+import {WebStack} from "../lib/WebStack";
 
 const app = new cdk.App();
 Tags.of(app).add('workload', 'portfolio');
@@ -33,13 +35,19 @@ export class PortfolioEnvStage extends cdk.Stage {
 
     const infraStack = new InfrastructureStack(this, `ecommerce-infra`);
 
-    const apiPrereqStack = new ApiPrereqStack(this, `ecommerce-api-prereq`)
-
+    const apiPrereqStack = new ApiPrereqStack(this, `ecommerce-api-prereq`);
     new ApiStack(this, `ecommerce-api`, {
       clusterName: infraStack.clusterName,
       vpcName: infraStack.vpcName,
       ecrRepoName: apiPrereqStack.repositoryName,
-    })
+    });
+    
+    const webPrereqStack = new WebPrereqStack(this, `ecommerce-web-prereq`);
+    new WebStack(this, `ecommerce-web`, {
+      clusterName: infraStack.clusterName,
+      vpcName: infraStack.vpcName,
+      ecrRepoName: webPrereqStack.repositoryName,
+    });
   }
 }
 

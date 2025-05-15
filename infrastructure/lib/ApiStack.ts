@@ -3,9 +3,7 @@ import { Construct } from 'constructs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { FargateService } from './constructs/api/FargateService';
-import { GreenTarget } from './constructs/api/GreenTarget';
-import { CodeDeploy } from './constructs/api/CodeDeploy';
+import { FargateServiceBuilder } from './constructs/common/FargateServiceBuilder';
 import { ApiGateway } from './constructs/api/ApiGateway';
 
 export interface ApiStackProps extends cdk.StackProps {
@@ -34,7 +32,7 @@ export class ApiStack extends cdk.Stack {
 
     const ecrRepository = ecr.Repository.fromRepositoryName(this, 'ImportedRepo', props.ecrRepoName);
 
-    const fargateService = new FargateService(this, 'ApiService', {
+    const fargateService = new FargateServiceBuilder(this, 'ApiService', {
       cluster,
       repository: ecrRepository,
       serviceName: this.serviceName,
@@ -45,6 +43,7 @@ export class ApiStack extends cdk.Stack {
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
       publicLoadBalancer: false,
+      usingCodeDeploy: true,
     });
 
     const apiGateway = new ApiGateway(this, 'ApiGateway', {
@@ -54,18 +53,11 @@ export class ApiStack extends cdk.Stack {
       apiName: 'portfolio-api'
     });
 
-    const greenTarget = new GreenTarget(this, 'GreenTarget', {
-      vpc,
-      loadBalancer: fargateService.loadBalancer,
-      containerPort: this.containerPort })
-        .withTestListener(this.testListenerPort, {gateway: apiGateway, testPath: this.testListenerApiPath})
-
-    new CodeDeploy(this, 'ApiDeployment', {
-      serviceName: this.serviceName,
-      service: fargateService.service,
-      greenTarget: greenTarget,
-      blueTargetGroup: fargateService.targetGroup,
-      listener: fargateService.listener,
-    });
+    fargateService
+        .withCodeDeploy({
+          testListener: {
+            port: this.testListenerPort,
+            apiGateway: {gateway: apiGateway, testPath: this.testListenerApiPath} }
+        }).build()
   }
 }

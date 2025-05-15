@@ -54,7 +54,7 @@ jobs:
       - name: Create task definition revision
         id: create-task-def
         run: |
-          CONTAINER_NAME="portfolio-ecommerce-service"
+          CONTAINER_NAME="${{ inputs.ecs_service }}"
           # Update the container image in the task definition and filter only allowed fields
           jq --arg IMAGE "${{ inputs.image_uri }}" \
             '{
