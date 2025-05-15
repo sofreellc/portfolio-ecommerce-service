@@ -2,5 +2,17 @@
   "name": "validate-green",
   "version": "1.0.0",
   "description": "Lambda function to validate green deployment for CodeDeploy",
-  "main": "index.js"
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.136",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-codedeploy": "^3.485.0"
+  }
 }

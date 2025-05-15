@@ -13,7 +13,10 @@
     "destroy": "cdk destroy --app cdk.out",
     "diff": "cdk diff --app cdk.out",
     "synth": "rm -rf cdk.out/* && cdk synth -q",
-    "bootstrap": "cdk bootstrap"
+    "bootstrap": "cdk bootstrap",
+    "install-lambda-deps": "./bin/install-lambda-deps.sh",
+    "install-all": "yarn install --frozen-lockfile && yarn run install-lambda-deps",
+    "prebuild": "yarn run install-lambda-deps"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
