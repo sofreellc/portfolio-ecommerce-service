@@ -1,4 +1,5 @@
-const http = require('https');
+const httpModule = process.env.IS_SECURE === "true" ? "https" : "http";
+const http = require(httpModule);
 const { CodeDeployClient, PutLifecycleEventHookExecutionStatusCommand } = require('@aws-sdk/client-codedeploy');
 const codedeploy = new CodeDeployClient();
 
