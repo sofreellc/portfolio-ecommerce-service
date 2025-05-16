@@ -7,3 +7,11 @@ services:
       - "8080:8080"
     environment:
       - GIN_MODE=debug
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development

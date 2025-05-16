@@ -1,10 +1,8 @@
-export DOCKER_HOST=unix://$(HOME)/.local/share/containers/podman/machine/podman-default/podman.sock
-
 reset:
 	make down up
 
 up:
-	podman-compose up --build --detach api
+	docker-compose up --build --detach api web
 
 down:
-	podman-compose down --remove-orphans
+	docker-compose down --remove-orphans
