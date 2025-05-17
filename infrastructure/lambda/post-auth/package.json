@@ -1,0 +1,18 @@
+{
+  "name": "post-auth",
+  "version": "1.0.0",
+  "description": "Lambda function to handle post-authentication events for Cognito",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.136",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.810.0"
+  }
+}

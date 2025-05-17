@@ -6,6 +6,8 @@ import {ApiPrereqStack} from "../lib/ApiPrereqStack";
 import {ApiStack} from "../lib/ApiStack";
 import {WebPrereqStack} from "../lib/WebPrereqStack";
 import {WebStack} from "../lib/WebStack";
+import {AuthStack} from "../lib/AuthStack";
+import {AuthLambdaPermissionsStack} from "../lib/AuthLambdaPermissionsStack";
 
 const app = new cdk.App();
 Tags.of(app).add('workload', 'portfolio');
@@ -41,8 +43,15 @@ export class PortfolioEnvStage extends cdk.Stage {
       vpcName: infraStack.vpcName,
       ecrRepoName: apiPrereqStack.repositoryName,
     });
-    
+
     const webPrereqStack = new WebPrereqStack(this, `ecommerce-web-prereq`);
+
+    const authStack = new AuthStack(this, 'ecommerce-auth', {});
+    new AuthLambdaPermissionsStack( this, 'ecommerce-auth-lambda-perms', {
+      userPoolId: authStack.userPoolId,
+      postAuthLambdaArn: authStack.postAuthLambdaArn,
+    });
+
     new WebStack(this, `ecommerce-web`, {
       clusterName: infraStack.clusterName,
       vpcName: infraStack.vpcName,

@@ -29,9 +29,6 @@ jobs:
       - name: Install dependencies
         run: yarn install-all
 
-      - name: Build
-        run: yarn build
-
       - name: Synthesize
         run: yarn synth
 
