@@ -6,9 +6,7 @@ import * as path from "path";
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import {Stack} from "aws-cdk-lib";
 
-export interface AuthStackProps extends cdk.StackProps {
-    webCloudFrontDomain?: string;
-}
+export interface AuthStackProps extends cdk.StackProps { }
 
 export class AuthStack extends cdk.Stack {
     public readonly userPoolId: string;
@@ -18,7 +16,7 @@ export class AuthStack extends cdk.Stack {
     public readonly clientIssuer: string;
     public readonly postAuthLambdaArn: string;
 
-    constructor(scope: Construct, id: string, props: AuthStackProps) {
+    constructor(scope: Construct, id: string, props?: AuthStackProps) {
         super(scope, id, props);
 
         const postAuthLambda = new lambda.Function(this, 'PostAuthLambda', {
@@ -55,6 +53,9 @@ export class AuthStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.DESTROY, // Use RETAIN in production
         });
 
+        userPool.addDomain("UserPoolDomain", {
+            cognitoDomain: { domainPrefix: `portfolio-auth` },
+        });
 
         new cognito.CfnUserPoolGroup(this, 'AdminGroup', {
             userPoolId: userPool.userPoolId,
@@ -82,6 +83,9 @@ export class AuthStack extends cdk.Stack {
                 userPassword: true,
                 userSrp: true,
             },
+            supportedIdentityProviders: [
+                cognito.UserPoolClientIdentityProvider.COGNITO,
+            ],
             preventUserExistenceErrors: true,
             generateSecret: true,
             oAuth: {
@@ -93,14 +97,6 @@ export class AuthStack extends cdk.Stack {
                     cognito.OAuthScope.OPENID,
                     cognito.OAuthScope.PROFILE,
                 ],
-                callbackUrls: [
-                    'http://localhost:3000/api/auth/callback/cognito',
-                    props.webCloudFrontDomain ? `https://${props.webCloudFrontDomain}/api/auth/callback/cognito` : undefined,
-                ].filter(Boolean) as string[],
-                logoutUrls: [
-                    'http://localhost:3000/auth/login',
-                    props.webCloudFrontDomain ? `https://${props.webCloudFrontDomain}/auth/login` : undefined,
-                ].filter(Boolean) as string[],
             },
             readAttributes: new cognito.ClientAttributes()
                 .withStandardAttributes({
@@ -124,6 +120,5 @@ export class AuthStack extends cdk.Stack {
         this.clientId = webClient.userPoolClientId;
         this.clientIssuer = `https://cognito-idp.${Stack.of(this).region}.amazonaws.com/${userPool.userPoolId}`;
         this.clientSecretArn = webClientSecret.secretArn;
-
     }
 }

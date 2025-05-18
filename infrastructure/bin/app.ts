@@ -7,7 +7,7 @@ import {ApiStack} from "../lib/ApiStack";
 import {WebPrereqStack} from "../lib/WebPrereqStack";
 import {WebStack} from "../lib/WebStack";
 import {AuthStack} from "../lib/AuthStack";
-import {AuthLambdaPermissionsStack} from "../lib/AuthLambdaPermissionsStack";
+import {AuthConfigureStack} from "../lib/AuthConfigureStack";
 
 const app = new cdk.App();
 Tags.of(app).add('workload', 'portfolio');
@@ -38,6 +38,7 @@ export class PortfolioEnvStage extends cdk.Stage {
     const infraStack = new InfrastructureStack(this, `ecommerce-infra`);
 
     const apiPrereqStack = new ApiPrereqStack(this, `ecommerce-api-prereq`);
+
     new ApiStack(this, `ecommerce-api`, {
       clusterName: infraStack.clusterName,
       vpcName: infraStack.vpcName,
@@ -46,16 +47,22 @@ export class PortfolioEnvStage extends cdk.Stage {
 
     const webPrereqStack = new WebPrereqStack(this, `ecommerce-web-prereq`);
 
-    const authStack = new AuthStack(this, 'ecommerce-auth', {});
-    new AuthLambdaPermissionsStack( this, 'ecommerce-auth-lambda-perms', {
-      userPoolId: authStack.userPoolId,
-      postAuthLambdaArn: authStack.postAuthLambdaArn,
-    });
+    const authStack = new AuthStack(this, 'ecommerce-auth');
 
-    new WebStack(this, `ecommerce-web`, {
+    const webStack = new WebStack(this, `ecommerce-web`, {
       clusterName: infraStack.clusterName,
       vpcName: infraStack.vpcName,
       ecrRepoName: webPrereqStack.repositoryName,
+      cognitoClientId: authStack.clientId,
+      cognitoClientSecretName: authStack.clientSecretArn,
+      cognitoIssuer: authStack.clientIssuer,
+    });
+
+    new AuthConfigureStack( this, 'ecommerce-auth-config', {
+      userPoolClientId: authStack.clientId,
+      userPoolId: authStack.userPoolId,
+      postAuthLambdaArn: authStack.postAuthLambdaArn,
+      webCloudFrontDomain: webStack.cloudFrontDomainName,
     });
   }
 }

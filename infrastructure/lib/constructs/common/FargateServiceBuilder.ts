@@ -4,6 +4,8 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import {GreenTarget} from "../api/GreenTarget";
 import {CodeDeploy} from "../api/CodeDeploy";
 import {ApiGateway} from "../api/ApiGateway";
@@ -24,12 +26,14 @@ export interface FargateServiceBuilderProps {
   maxHealthyPercent?: number;
   publicLoadBalancer?: boolean;
   usingCodeDeploy?: boolean;
+  environment?: {[key: string]: string};
+  secrets?: {[key: string]: string}; // key: env var name, value: Secret ARN
 }
 
 export class FargateServiceBuilder extends Construct {
   public readonly loadBalancer: elbv2.ApplicationLoadBalancer;
   public readonly listener: elbv2.ApplicationListener;
-  private readonly fargateService: ecsPatterns.ApplicationLoadBalancedFargateService;
+  public readonly fargateService: ecsPatterns.ApplicationLoadBalancedFargateService;
 
   private props: FargateServiceBuilderProps;
   private withCodeDeployProps?: WithCodeDeployProps;
@@ -41,6 +45,16 @@ export class FargateServiceBuilder extends Construct {
         ? { type: ecs.DeploymentControllerType.CODE_DEPLOY }
         : { type: ecs.DeploymentControllerType.ECS };
 
+    const executionRole = new iam.Role(this, 'ExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
+      ]
+    });
+    const taskRole = new iam.Role(this, 'TaskRole', {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+    });
+
     const fargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
       cluster: props.cluster,
       serviceName: props.serviceName,
@@ -51,6 +65,10 @@ export class FargateServiceBuilder extends Construct {
         image: ecs.ContainerImage.fromEcrRepository(props.repository),
         containerPort: props.containerPort,
         containerName: props.serviceName,
+        environment: props.environment || {},
+        secrets: this.createSecretsFromSecretManager(props.secrets || {}, taskRole, executionRole),
+        taskRole: taskRole,
+        executionRole: executionRole,
       },
       publicLoadBalancer: props.publicLoadBalancer || false,
       minHealthyPercent: props.minHealthyPercent || 100,
@@ -73,6 +91,38 @@ export class FargateServiceBuilder extends Construct {
     this.fargateService = fargateService
     this.loadBalancer = fargateService.loadBalancer
     this.listener = fargateService.listener
+  }
+
+  private createSecretsFromSecretManager(secretArns: {[key: string]: string}, taskRole: iam.Role, executionRole: iam.Role) : { [key: string]: ecs.Secret } | undefined  {
+    if (Object.keys(secretArns).length === 0) {
+      return undefined;
+    }
+
+    // Add permissions to read from Secrets Manager
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'secretsmanager:GetSecretValue',
+        'secretsmanager:DescribeSecret',
+      ],
+      resources: Object.values(secretArns),
+    }));
+
+    executionRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'secretsmanager:GetSecretValue',
+        'secretsmanager:DescribeSecret',
+      ],
+      resources: Object.values(secretArns),
+    }));
+
+    // Create secrets from Secret Manager ARNs
+    const secrets: { [key: string]: ecs.Secret } = {};
+    Object.entries(secretArns).forEach(([envVarName, secretArn]) => {
+      const secret = secretsmanager.Secret.fromSecretCompleteArn(this, `${envVarName}Secret`, secretArn);
+      secrets[envVarName] = ecs.Secret.fromSecretsManager(secret);
+    });
+
+    return secrets;
   }
 
   public build() : FargateServiceBuilder  {
