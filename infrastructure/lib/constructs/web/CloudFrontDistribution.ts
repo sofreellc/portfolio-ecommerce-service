@@ -22,18 +22,34 @@ export class CloudFrontDistribution extends Construct {
   constructor(scope: Construct, id: string, props: CloudFrontDistributionProps) {
     super(scope, id);
 
-    // Define cache policies
-    const cachePolicy = new cloudfront.CachePolicy(this, 'WebCachePolicy', {
-      defaultTtl: cdk.Duration.hours(1),
-      minTtl: cdk.Duration.minutes(1),
-      maxTtl: cdk.Duration.days(1),
+    // Define cache policies - using separate policies for static assets and dynamic content
+    const staticAssetsCachePolicy = new cloudfront.CachePolicy(this, 'StaticAssetsCachePolicy', {
+      defaultTtl: cdk.Duration.days(365), // Long cache for hashed static assets
+      minTtl: cdk.Duration.hours(1),
+      maxTtl: cdk.Duration.days(365),
       enableAcceptEncodingGzip: true,
       enableAcceptEncodingBrotli: true,
+      // Don't include Accept-Encoding in the header allowlist when enableAcceptEncodingGzip is true
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+      comment: 'Cache policy for static assets with content-based hashes (JS, CSS, images)'
+    });
+
+    // Cache policy for dynamic content (default behavior)
+    const dynamicContentCachePolicy = new cloudfront.CachePolicy(this, 'DynamicContentCachePolicy', {
+      defaultTtl: cdk.Duration.seconds(0), // Don't cache dynamic content by default
+      minTtl: cdk.Duration.seconds(0),
+      maxTtl: cdk.Duration.minutes(1),  // Very short max TTL for dynamic content
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+      // Cannot include Accept-Encoding in allowList when enableAcceptEncodingGzip is true
       headerBehavior: cloudfront.CacheHeaderBehavior.allowList(
-        'Host', 'Origin'
+        'Host', 'Origin', 'Authorization', 'Accept', 'Cache-Control'
       ),
       cookieBehavior: cloudfront.CacheCookieBehavior.all(),
       queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+      comment: 'Cache policy for dynamic content (HTML, API responses)'
     });
 
     // Define origin request policy
@@ -51,11 +67,40 @@ export class CloudFrontDistribution extends Construct {
         origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {
           protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
         }),
-        cachePolicy: cachePolicy,
+        cachePolicy: dynamicContentCachePolicy,
         originRequestPolicy: originRequestPolicy,
         compress: true,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+      additionalBehaviors: {
+        // Static assets with hash pattern (_next/static/*) should use long-term caching
+        '_next/static/*': {
+          origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          }),
+          cachePolicy: staticAssetsCachePolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+        },
+        // Images with hash pattern (_next/image/*) should use long-term caching
+        '_next/image/*': {
+          origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          }),
+          cachePolicy: staticAssetsCachePolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+        },
+        // Data build manifest should use long-term caching (contains build ID)
+        '_next/data/:buildId/*': {
+          origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          }),
+          cachePolicy: staticAssetsCachePolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+        },
       },
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       enableLogging: true,
