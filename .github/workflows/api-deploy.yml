@@ -1,14 +1,15 @@
 name: Build and Deploy API
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'infrastructure/lib/ApiPrereqStack.ts'
-      - 'infrastructure/lib/ApiStack.ts'
-      - 'api/**'
   workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        description: 'Environment (dev or prod)'
 
 permissions:
   id-token: write
@@ -19,27 +20,11 @@ jobs:
     name: Build and Synthesize
     uses: ./.github/workflows/_cdk-build.yml
 
-  deploy-api-dev:
-    name: Deploy API to Development
+  deploy-api-:
+    name: Deploy API
     uses: ./.github/workflows/_api-deploy.yml
     needs: build
     with:
-      environment: dev
+      environment: ${{ inputs.environment }}
       artifact_name: ${{ needs.build.outputs.artifact_name }}
 
-  wait-for-approval:
-    name: Wait for Production Approval
-    needs: deploy-api-dev
-    runs-on: ubuntu-latest
-    environment: production-approval
-    steps:
-      - name: Approval Gate
-        run: echo "Deployment to production approved!"
-
-  deploy-api-prod:
-    name: Deploy API to Production
-    uses: ./.github/workflows/_api-deploy.yml
-    needs: [build, wait-for-approval]
-    with:
-      environment: prod
-      artifact_name: ${{ needs.build.outputs.artifact_name }}

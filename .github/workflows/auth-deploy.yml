@@ -1,13 +1,15 @@
 name: Build and Deploy Auth Stack
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'infrastructure/lib/AuthStack.ts'
-      - 'infrastructure/lambda/post-auth/**'
   workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        description: 'Environment (dev or prod)'
 
 permissions:
   id-token: write
@@ -18,47 +20,20 @@ jobs:
     name: Build and Synthesize
     uses: ./.github/workflows/_cdk-build.yml
 
-  deploy-auth-stack-dev:
-    name: Deploy Auth Stack Dev
+  deploy-auth-stack:
+    name: Deploy Auth Stack
     uses: ./.github/workflows/_cdk-deploy.yml
     needs: build
     with:
-      environment: dev
-      stack-pattern: 'portfolio-stage-dev/ecommerce-auth'
+      environment: ${{ inputs.environment }}
+      stack-pattern: 'ecommerce-service-${{ inputs.environment }}/auth'
       artifact_name: ${{ needs.build.outputs.artifact_name }}
 
-  deploy-auth-lambda-stack-dev:
-    name: Deploy Auth Lambda Stack Dev
+  deploy-auth-config-stack:
+    name: Deploy Auth Configure
     uses: ./.github/workflows/_cdk-deploy.yml
-    needs: deploy-auth-stack-dev
+    needs: deploy-auth-stack
     with:
-      environment: dev
-      stack-pattern: 'portfolio-stage-dev/ecommerce-auth-lambda-perms'
-      artifact_name: ${{ needs.build.outputs.artifact_name }}
-
-  wait-for-approval:
-    name: Wait for Production Approval
-    needs: deploy-auth-lambda-stack-dev
-    runs-on: ubuntu-latest
-    environment: production-approval
-    steps:
-      - name: Approval Gate
-        run: echo "Deployment to production approved!"
-
-  deploy-auth-stack-prod:
-    name: Deploy Auth Stack Prod
-    uses: ./.github/workflows/_cdk-deploy.yml
-    needs: wait-for-approval
-    with:
-      environment: prod
-      stack-pattern: 'portfolio-stage-prod/ecommerce-auth'
-      artifact_name: ${{ needs.build.outputs.artifact_name }}
-
-  deploy-auth-lambda-stack-prod:
-    name: Deploy Auth Lambda Stack Prod
-    uses: ./.github/workflows/_cdk-deploy.yml
-    needs: deploy-auth-stack-prod
-    with:
-      environment: prod
-      stack-pattern: 'portfolio-stage-prod/ecommerce-auth-lambda-perms'
+      environment: ${{ inputs.environment }}
+      stack-pattern: 'ecommerce-service-${{ inputs.environment }}/auth-config'
       artifact_name: ${{ needs.build.outputs.artifact_name }}

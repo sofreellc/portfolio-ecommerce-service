@@ -2,21 +2,22 @@ name: "Destroy Infrastructure"
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        description: 'Environment (dev or prod)'
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  destroy-dev:
-    name: Destroy Development
+  destroy:
+    name: Destroy
     uses: ./.github/workflows/_infra-destroy.yml
     with:
-      environment: dev
-
-  destroy-prod:
-    name: Destroy Production
-    uses: ./.github/workflows/_infra-destroy.yml
-    needs: destroy-dev
-    with:
-      environment: prod
+      environment: ${{ inputs.environment }}

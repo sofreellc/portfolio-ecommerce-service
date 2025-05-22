@@ -45,4 +45,4 @@ deploy_infrastructure
 echo -e "\n${GREEN}=== Infrastructure update completed successfully! ===${NC}"
 echo -e "${GREEN}Environment:${NC} ${YELLOW}$ENV${NC}"
 echo -e "\n${BLUE}To view your CloudFormation stacks:${NC}"
-echo -e "aws cloudformation list-stacks --query 'StackSummaries[?contains(StackName, `portfolio-stage-$ENV`) && StackStatus!=`DELETE_COMPLETE`].StackName' --output table"
+echo -e "aws cloudformation list-stacks --query 'StackSummaries[?contains(StackName, `ecommerce-service-$ENV`) && StackStatus!=`DELETE_COMPLETE`].StackName' --output table"

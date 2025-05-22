@@ -1,14 +1,15 @@
 name: Build and Deploy Web App
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'infrastructure/lib/WebPrereqStack.ts'
-      - 'infrastructure/lib/WebStack.ts'
-      - 'web/**'
   workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        description: 'Environment (dev or prod)'
 
 permissions:
   id-token: write
@@ -19,27 +20,11 @@ jobs:
     name: Build and Synthesize
     uses: ./.github/workflows/_cdk-build.yml
 
-  deploy-web-dev:
-    name: Deploy Web to Development
+  deploy-web:
+    name: Deploy Web
     uses: ./.github/workflows/_web-deploy.yml
     needs: build
     with:
-      environment: dev
+      environment: ${{ inputs.environment }}
       artifact_name: ${{ needs.build.outputs.artifact_name }}
 
-  wait-for-approval:
-    name: Wait for Production Approval
-    needs: deploy-web-dev
-    runs-on: ubuntu-latest
-    environment: production-approval
-    steps:
-      - name: Approval Gate
-        run: echo "Deployment to production approved!"
-
-  deploy-web-prod:
-    name: Deploy Web to Production
-    uses: ./.github/workflows/_web-deploy.yml
-    needs: [build, wait-for-approval]
-    with:
-      environment: prod
-      artifact_name: ${{ needs.build.outputs.artifact_name }}

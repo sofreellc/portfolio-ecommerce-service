@@ -13,25 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  destroy-api:
+  destroy:
     name: Destroy API
     uses: ./.github/workflows/_cdk-destroy.yml
     with:
-      environment: dev
-      stack-pattern: 'portfolio-stage-${{ inputs.environment }}/ecommerce-api'
-
-  destroy-api-prereq:
-    name: Destroy API Prereq
-    needs: destroy-api
-    uses: ./.github/workflows/_cdk-destroy.yml
-    with:
-      environment: dev
-      stack-pattern: 'portfolio-stage-${{ inputs.environment }}/ecommerce-api-prereq'
-
-  destroy-infra:
-    name: Destroy Infra
-    needs: destroy-api
-    uses: ./.github/workflows/_cdk-destroy.yml
-    with:
-      environment: dev
-      stack-pattern: 'portfolio-stage-${{ inputs.environment }}/ecommerce-infra'
+      environment: ${{ inputs.environment }}
+      stack-pattern: 'ecommerce-service-${{ inputs.environment }}/*'

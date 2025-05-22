@@ -22,7 +22,7 @@ jobs:
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: ${{ inputs.environment }}
-      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-web-prereq', inputs.environment) }}
+      stack-pattern: ${{ format('ecommerce-service-{0}/web-state', inputs.environment) }}
       artifact_name: ${{ inputs.artifact_name }}
 
   build-and-publish-web:
@@ -42,7 +42,7 @@ jobs:
     needs: build-and-publish-web
     with:
       environment: ${{ inputs.environment }}
-      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-web', inputs.environment) }}
+      stack-pattern: ${{ format('ecommerce-service-{0}/web', inputs.environment) }}
       artifact_name: ${{ inputs.artifact_name }}
 
   deploy-web:

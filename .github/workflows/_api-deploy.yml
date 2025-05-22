@@ -22,8 +22,8 @@ jobs:
     uses: ./.github/workflows/_cdk-deploy.yml
     with:
       environment: ${{ inputs.environment }}
-      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-api-prereq', inputs.environment) }}
-      artifact_name: ${{ inputs.artifact_name }}
+      stack-pattern: ${{ format('ecommerce-service-{0}/api-state', inputs.environment) }}
+      artifact_name: ${{ inputs.artifact_name }F}
 
   build-and-publish-api:
     needs: deploy-api-infra-prereq
@@ -42,7 +42,7 @@ jobs:
     needs: build-and-publish-api
     with:
       environment: ${{ inputs.environment }}
-      stack-pattern: ${{ format('portfolio-stage-{0}/ecommerce-api', inputs.environment) }}
+      stack-pattern: ${{ format('ecommerce-service-{0}/api', inputs.environment) }}
       artifact_name: ${{ inputs.artifact_name }}
 
   deploy-api:
