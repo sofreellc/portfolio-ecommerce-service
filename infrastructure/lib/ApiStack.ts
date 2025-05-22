@@ -50,7 +50,6 @@ export class ApiStack extends cdk.Stack {
       vpc,
       loadBalancer: fargateService.loadBalancer,
       primaryListener: fargateService.listener,
-      apiName: 'portfolio-api'
     });
 
     fargateService

@@ -2,15 +2,15 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { CloudFrontSecurityGroup } from './CloudFrontSecurityGroup';
+import {IApplicationLoadBalancer} from "aws-cdk-lib/aws-elasticloadbalancingv2";
 
 export interface CloudFrontDistributionProps {
-  loadBalancer: elbv2.ApplicationLoadBalancer;
+  loadBalancer: IApplicationLoadBalancer;
   domainName?: string;
   certificateArn?: string;
   hostedZoneId?: string;
@@ -23,6 +23,7 @@ export class CloudFrontDistribution extends Construct {
     super(scope, id);
 
     // Define cache policies - using separate policies for static assets and dynamic content
+    //
     const staticAssetsCachePolicy = new cloudfront.CachePolicy(this, 'StaticAssetsCachePolicy', {
       defaultTtl: cdk.Duration.days(365), // Long cache for hashed static assets
       minTtl: cdk.Duration.hours(1),
@@ -36,20 +37,30 @@ export class CloudFrontDistribution extends Construct {
       comment: 'Cache policy for static assets with content-based hashes (JS, CSS, images)'
     });
 
-    // Cache policy for dynamic content (default behavior)
-    const dynamicContentCachePolicy = new cloudfront.CachePolicy(this, 'DynamicContentCachePolicy', {
-      defaultTtl: cdk.Duration.seconds(0), // Don't cache dynamic content by default
+    // Extremely aggressive no-cache policy for HTML content
+    const htmlNoCachePolicy = new cloudfront.CachePolicy(this, 'HtmlNoCachePolicy', {
+      defaultTtl: cdk.Duration.seconds(0), // Never cache HTML content by default
       minTtl: cdk.Duration.seconds(0),
-      maxTtl: cdk.Duration.minutes(1),  // Very short max TTL for dynamic content
+      maxTtl: cdk.Duration.seconds(0),  // Absolutely no caching allowed
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+      comment: 'No-cache policy specifically for HTML pages'
+    });
+
+    // API cache policy - slightly more lenient than HTML
+    const apiCachePolicy = new cloudfront.CachePolicy(this, 'ApiCachePolicy', {
+      defaultTtl: cdk.Duration.seconds(0), // Don't cache API responses by default
+      minTtl: cdk.Duration.seconds(0),
+      maxTtl: cdk.Duration.minutes(1),  // Short max TTL for API responses
       enableAcceptEncodingGzip: true,
       enableAcceptEncodingBrotli: true,
-      // Cannot include Accept-Encoding in allowList when enableAcceptEncodingGzip is true
       headerBehavior: cloudfront.CacheHeaderBehavior.allowList(
         'Host', 'Origin', 'Authorization', 'Accept', 'Cache-Control'
       ),
       cookieBehavior: cloudfront.CacheCookieBehavior.all(),
       queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
-      comment: 'Cache policy for dynamic content (HTML, API responses)'
+      comment: 'Cache policy for API responses'
     });
 
     // Define origin request policy
@@ -67,13 +78,23 @@ export class CloudFrontDistribution extends Construct {
         origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {
           protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
         }),
-        cachePolicy: dynamicContentCachePolicy,
+        cachePolicy: htmlNoCachePolicy, // Use the no-cache policy for HTML pages by default
         originRequestPolicy: originRequestPolicy,
         compress: true,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       additionalBehaviors: {
+        // API routes should use the API cache policy
+        '/api/*': {
+          origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          }),
+          cachePolicy: apiCachePolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          compress: true,
+        },
         // Static assets with hash pattern (_next/static/*) should use long-term caching
         '_next/static/*': {
           origin: origins.VpcOrigin.withApplicationLoadBalancer(props.loadBalancer, {

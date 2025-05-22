@@ -1,4 +1,12 @@
 {
+  "availability-zones:account=914847526688:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
   "availability-zones:account=427566522857:region=us-east-1": [
     "us-east-1a",
     "us-east-1b",
@@ -8,7 +16,7 @@
     "us-east-1f"
   ],
   "vpc-provider:account=427566522857:filter.tag:Name=portfolio-ecommerce-vpc:region=us-east-1:returnAsymmetricSubnets=true": {
-    "vpcId": "vpc-0ea8b39739e69055a",
+    "vpcId": "vpc-0b80c58a7b74f8c74",
     "vpcCidrBlock": "10.0.0.0/16",
     "ownerAccountId": "427566522857",
     "availabilityZones": [],
@@ -18,16 +26,16 @@
         "type": "Public",
         "subnets": [
           {
-            "subnetId": "subnet-00f8c3a3523a845d0",
+            "subnetId": "subnet-0f0c0d59395c961f8",
             "cidr": "10.0.0.0/18",
             "availabilityZone": "us-east-1a",
-            "routeTableId": "rtb-0580d75a387649388"
+            "routeTableId": "rtb-0b97d479def8f9bbf"
           },
           {
-            "subnetId": "subnet-01c931916f49ed343",
+            "subnetId": "subnet-0d3fb7a41dfd413fa",
             "cidr": "10.0.64.0/18",
             "availabilityZone": "us-east-1b",
-            "routeTableId": "rtb-0b7bb2343f5272d71"
+            "routeTableId": "rtb-0f9cc4ddcf3457f3f"
           }
         ]
       },
@@ -36,68 +44,16 @@
         "type": "Private",
         "subnets": [
           {
-            "subnetId": "subnet-005347087b946ef1f",
+            "subnetId": "subnet-0c5b8fa3ed3d8c774",
             "cidr": "10.0.128.0/18",
             "availabilityZone": "us-east-1a",
-            "routeTableId": "rtb-075f31e0264ebbd79"
+            "routeTableId": "rtb-04f4b1db28f1e4753"
           },
           {
-            "subnetId": "subnet-03183be4e72dd6084",
+            "subnetId": "subnet-0e02e5806d0ea68dd",
             "cidr": "10.0.192.0/18",
             "availabilityZone": "us-east-1b",
-            "routeTableId": "rtb-07755d206e8512c09"
-          }
-        ]
-      }
-    ]
-  },
-  "availability-zones:account=914847526688:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
-  ],
-  "vpc-provider:account=914847526688:filter.tag:Name=portfolio-ecommerce-vpc:region=us-east-1:returnAsymmetricSubnets=true": {
-    "vpcId": "vpc-02b391ec5b87416bf",
-    "vpcCidrBlock": "10.0.0.0/16",
-    "ownerAccountId": "914847526688",
-    "availabilityZones": [],
-    "subnetGroups": [
-      {
-        "name": "Private",
-        "type": "Private",
-        "subnets": [
-          {
-            "subnetId": "subnet-01484be20bc6d39c1",
-            "cidr": "10.0.128.0/18",
-            "availabilityZone": "us-east-1a",
-            "routeTableId": "rtb-06e826e792842a923"
-          },
-          {
-            "subnetId": "subnet-0cacd6e182f9f5937",
-            "cidr": "10.0.192.0/18",
-            "availabilityZone": "us-east-1b",
-            "routeTableId": "rtb-052ab50307768e628"
-          }
-        ]
-      },
-      {
-        "name": "Public",
-        "type": "Public",
-        "subnets": [
-          {
-            "subnetId": "subnet-0023841818dcd1706",
-            "cidr": "10.0.0.0/18",
-            "availabilityZone": "us-east-1a",
-            "routeTableId": "rtb-0433a51222ae49e00"
-          },
-          {
-            "subnetId": "subnet-0532327d6bd9c9906",
-            "cidr": "10.0.64.0/18",
-            "availabilityZone": "us-east-1b",
-            "routeTableId": "rtb-010a7bb38f69be8ab"
+            "routeTableId": "rtb-01d246641f65e41e3"
           }
         ]
       }

@@ -66,7 +66,6 @@ export class FargateServiceBuilder extends Construct {
         containerPort: props.containerPort,
         containerName: props.serviceName,
         environment: props.environment || {},
-        secrets: this.createSecretsFromSecretManager(props.secrets || {}, taskRole, executionRole),
         taskRole: taskRole,
         executionRole: executionRole,
       },
@@ -75,6 +74,8 @@ export class FargateServiceBuilder extends Construct {
       maxHealthyPercent: props.maxHealthyPercent || 200,
       deploymentController,
     });
+
+    addSecret(this, fargateService, props.secrets || {})
 
     const scaling = fargateService.service.autoScaleTaskCount({
       minCapacity: 1,
@@ -91,38 +92,6 @@ export class FargateServiceBuilder extends Construct {
     this.fargateService = fargateService
     this.loadBalancer = fargateService.loadBalancer
     this.listener = fargateService.listener
-  }
-
-  private createSecretsFromSecretManager(secretArns: {[key: string]: string}, taskRole: iam.Role, executionRole: iam.Role) : { [key: string]: ecs.Secret } | undefined  {
-    if (Object.keys(secretArns).length === 0) {
-      return undefined;
-    }
-
-    // Add permissions to read from Secrets Manager
-    taskRole.addToPolicy(new iam.PolicyStatement({
-      actions: [
-        'secretsmanager:GetSecretValue',
-        'secretsmanager:DescribeSecret',
-      ],
-      resources: Object.values(secretArns),
-    }));
-
-    executionRole.addToPolicy(new iam.PolicyStatement({
-      actions: [
-        'secretsmanager:GetSecretValue',
-        'secretsmanager:DescribeSecret',
-      ],
-      resources: Object.values(secretArns),
-    }));
-
-    // Create secrets from Secret Manager ARNs
-    const secrets: { [key: string]: ecs.Secret } = {};
-    Object.entries(secretArns).forEach(([envVarName, secretArn]) => {
-      const secret = secretsmanager.Secret.fromSecretCompleteArn(this, `${envVarName}Secret`, secretArn);
-      secrets[envVarName] = ecs.Secret.fromSecretsManager(secret);
-    });
-
-    return secrets;
   }
 
   public build() : FargateServiceBuilder  {
@@ -157,4 +126,52 @@ export class FargateServiceBuilder extends Construct {
     this.withCodeDeployProps = withCodeDeployProps
     return this;
   }
+}
+
+export function addEnv(
+    fargateService: ecsPatterns.ApplicationLoadBalancedFargateService,
+    env: { [key: string]: string },
+) {
+
+  const webContainer = fargateService.taskDefinition.defaultContainer!;
+
+  Object.entries(env).forEach(([key, value]) => {
+    webContainer.addEnvironment(key, value);
+  });
+}
+
+export function addSecret(
+  construct: Construct,
+  fargateService: ecsPatterns.ApplicationLoadBalancedFargateService,
+  secretArns: { [key: string]: string },
+) {
+  if (Object.keys(secretArns).length === 0) {
+    return undefined;
+  }
+
+  const taskRole = fargateService.taskDefinition.taskRole;
+  const executionRole = fargateService.taskDefinition.executionRole;
+
+  taskRole.addToPrincipalPolicy(new iam.PolicyStatement({
+    actions: [
+      'secretsmanager:GetSecretValue',
+      'secretsmanager:DescribeSecret',
+    ],
+    resources: Object.values(secretArns),
+  }));
+
+  if (executionRole) {
+    executionRole.addToPrincipalPolicy(new iam.PolicyStatement({
+      actions: [
+        'secretsmanager:GetSecretValue',
+        'secretsmanager:DescribeSecret',
+      ],
+      resources: Object.values(secretArns),
+    }));
+  }
+
+  Object.entries(secretArns).forEach(([envVarName, secretArn]) => {
+    const secret = secretsmanager.Secret.fromSecretCompleteArn(construct, `${envVarName}Secret`, secretArn);
+    fargateService.taskDefinition.defaultContainer?.addSecret(envVarName, ecs.Secret.fromSecretsManager(secret));
+  });
 }

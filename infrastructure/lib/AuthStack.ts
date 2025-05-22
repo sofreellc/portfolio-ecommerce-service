@@ -3,24 +3,20 @@ import { Construct } from "constructs";
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import {Stack} from "aws-cdk-lib";
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 export interface AuthStackProps extends cdk.StackProps { }
 
 export class AuthStack extends cdk.Stack {
     public readonly userPoolId: string;
     public readonly userPoolArn: string;
-    public readonly clientId: string;
-    public readonly clientSecretArn: string;
-    public readonly clientIssuer: string;
     public readonly postAuthLambdaArn: string;
+    public readonly poolIdParamName: string = '/portfolio/auth/userPoolId'
 
     constructor(scope: Construct, id: string, props?: AuthStackProps) {
         super(scope, id, props);
 
         const postAuthLambda = new lambda.Function(this, 'PostAuthLambda', {
-            functionName: 'post-auth',
             runtime: lambda.Runtime.NODEJS_22_X,
             handler: 'index.handler',
             code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/post-auth')),
@@ -78,47 +74,14 @@ export class AuthStack extends cdk.Stack {
             precedence: 2,
         });
 
-        const webClient = userPool.addClient('web-client', {
-            authFlows: {
-                userPassword: true,
-                userSrp: true,
-            },
-            supportedIdentityProviders: [
-                cognito.UserPoolClientIdentityProvider.COGNITO,
-            ],
-            preventUserExistenceErrors: true,
-            generateSecret: true,
-            oAuth: {
-                flows: {
-                    authorizationCodeGrant: true,
-                },
-                scopes: [
-                    cognito.OAuthScope.EMAIL,
-                    cognito.OAuthScope.OPENID,
-                    cognito.OAuthScope.PROFILE,
-                ],
-            },
-            readAttributes: new cognito.ClientAttributes()
-                .withStandardAttributes({
-                    email: true,
-                    emailVerified: true,
-                    givenName: true,
-                    familyName: true,
-                })
-                .withCustomAttributes('claims'),
-        });
-
-        const webClientSecret = new secretsmanager.Secret(this, 'WebClientSecret', {
-            secretName: '/ecommerce/auth/webClientSecret',
-            description: 'Secret for web client',
-            secretStringValue: webClient.userPoolClientSecret,
+        new ssm.StringParameter(this, 'UserPoolIdParam', {
+            parameterName: this.poolIdParamName,
+            description: 'Cognito User Pool ID',
+            stringValue: userPool.userPoolId,
         });
 
         this.userPoolId = userPool.userPoolId;
         this.postAuthLambdaArn = postAuthLambda.functionArn;
         this.userPoolArn = userPool.userPoolArn;
-        this.clientId = webClient.userPoolClientId;
-        this.clientIssuer = `https://cognito-idp.${Stack.of(this).region}.amazonaws.com/${userPool.userPoolId}`;
-        this.clientSecretArn = webClientSecret.secretArn;
     }
 }

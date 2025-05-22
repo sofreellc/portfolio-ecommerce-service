@@ -76,7 +76,6 @@ export class CodeDeploy extends Construct {
     // Create a validation hook Lambda function if green target reachable
     if(props.greenTarget.testListener) {
       const validateHookFn = new lambda.Function(this, 'ValidateGreenTargetHook', {
-        functionName: "validate-green",
         runtime: lambda.Runtime.NODEJS_22_X,
         handler: 'index.handler',
         code: lambda.Code.fromAsset(path.join(__dirname, '../../../lambda/validate-green')),

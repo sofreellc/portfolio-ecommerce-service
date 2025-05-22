@@ -8,7 +8,6 @@ export interface ApiGatewayProps {
   vpc: ec2.IVpc;
   loadBalancer: elbv2.ApplicationLoadBalancer;
   primaryListener: elbv2.ApplicationListener;
-  apiName: string;
 }
 
 export class ApiGateway extends Construct {
@@ -21,9 +20,7 @@ export class ApiGateway extends Construct {
     super(scope, id);
 
     // Create an HTTP API
-    this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
-      apiName: props.apiName,
-    });
+    this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi');
 
     // Create a security group for the VPC Link
     const vpcLinkSg = new ec2.SecurityGroup(this, 'VpcLinkSecurityGroup', {
