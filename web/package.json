@@ -11,7 +11,9 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.2"
+    "next": "15.3.2",
+    "next-auth": "^5.0.0-beta.7",
+    "@aws-sdk/client-cognito-identity-provider": "^3.529.1"
   },
   "devDependencies": {
     "typescript": "^5",
